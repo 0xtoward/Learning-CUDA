@@ -77,10 +77,8 @@ __global__ void flashAttentionKernel(const T* q, const T* k, const T* v, T* outp
   // materializing an O(sequence_length^2) score matrix.  A single lane uses
   // a fixed accumulation order for QK, which keeps the float result stable
   // across arbitrary head dimensions.
-  float accumulator = 0.0f;
   __shared__ float shared_max;
   __shared__ float shared_sum;
-  __shared__ float shared_score;
 
   if (lane == 0) {
     shared_max = -INFINITY;
@@ -91,7 +89,7 @@ __global__ void flashAttentionKernel(const T* q, const T* k, const T* v, T* outp
            static_cast<size_t>(key_pos) * kv_heads + kv_head) * head_dim;
       float dot = 0.0f;
       for (int dim = 0; dim < head_dim; ++dim) {
-        dot = fmaf(toFloat(q[q_offset + dim]), toFloat(k[kv_offset + dim]), dot);
+        dot += toFloat(q[q_offset + dim]) * toFloat(k[kv_offset + dim]);
       }
       shared_max = fmaxf(shared_max, dot * scale);
     }
@@ -106,40 +104,28 @@ __global__ void flashAttentionKernel(const T* q, const T* k, const T* v, T* outp
       for (int dim = 0; dim < head_dim; ++dim) {
         dot = fmaf(toFloat(q[q_offset + dim]), toFloat(k[kv_offset + dim]), dot);
       }
-      shared_sum += expf(dot * scale - shared_max);
+      shared_sum += static_cast<float>(exp(static_cast<double>(dot * scale - shared_max)));
     }
   }
-  __syncthreads();
-
-  for (int key_pos = 0; key_pos < src_seq_len; ++key_pos) {
-    if (is_causal && key_pos > query_pos) break;
-    const size_t kv_offset =
-        (static_cast<size_t>(batch) * src_seq_len * kv_heads +
-         static_cast<size_t>(key_pos) * kv_heads + kv_head) * head_dim;
-    if (lane == 0) {
+  if (lane == 0) {
+    for (int output_dim = 0; output_dim < head_dim; ++output_dim) {
+      float accumulator = 0.0f;
+      for (int key_pos = 0; key_pos < src_seq_len; ++key_pos) {
+        if (is_causal && key_pos > query_pos) break;
+        const size_t kv_offset =
+            (static_cast<size_t>(batch) * src_seq_len * kv_heads +
+             static_cast<size_t>(key_pos) * kv_heads + kv_head) * head_dim;
       float dot = 0.0f;
       for (int dim = 0; dim < head_dim; ++dim) {
-        dot = fmaf(toFloat(q[q_offset + dim]), toFloat(k[kv_offset + dim]), dot);
+        dot += toFloat(q[q_offset + dim]) * toFloat(k[kv_offset + dim]);
       }
-      shared_score = dot * scale;
+        const float probability =
+            static_cast<float>(exp(static_cast<double>(dot * scale - shared_max))) / shared_sum;
+        accumulator += probability * toFloat(v[kv_offset + output_dim]);
+      }
+      output[output_offset + output_dim] = fromFloat<T>(accumulator);
     }
-    __syncthreads();
-    const float probability = expf(shared_score - shared_max) / shared_sum;
-    if (lane < head_dim) {
-      accumulator = fmaf(probability, toFloat(v[kv_offset + lane]), accumulator);
-    }
-    __syncthreads();
   }
-
-  if (lane < head_dim) {
-    output[output_offset + lane] = fromFloat<T>(accumulator);
-  }
-}
-
-int attentionThreads(int head_dim) {
-  int threads = 1;
-  while (threads < head_dim && threads < kAttentionMaxThreads) threads <<= 1;
-  return threads;
 }
 
 }  // namespace
@@ -231,9 +217,8 @@ void flashAttention(const std::vector<T>& h_q, const std::vector<T>& h_k,
   RUNTIME_CHECK(cudaMemcpy(d_k, h_k.data(), kv_elements * sizeof(T), cudaMemcpyHostToDevice));
   RUNTIME_CHECK(cudaMemcpy(d_v, h_v.data(), kv_elements * sizeof(T), cudaMemcpyHostToDevice));
 
-  const int threads = attentionThreads(head_dim);
   const int blocks = batch_size * target_seq_len * query_heads;
-  flashAttentionKernel<T><<<blocks, threads>>>(
+  flashAttentionKernel<T><<<blocks, 1>>>(
       d_q, d_k, d_v, d_o, target_seq_len, src_seq_len, query_heads, kv_heads,
       head_dim, is_causal, 1.0f / sqrtf(static_cast<float>(head_dim)));
   RUNTIME_CHECK(cudaGetLastError());
