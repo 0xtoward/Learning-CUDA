@@ -1,0 +1,20 @@
+# Generated executables and compiler output
+bin/
+bin_nvtx/
+build/
+*.o
+*.so
+*.cubin
+*.ptx
+*.sass
+
+# Large profiler captures; keep manifests, summaries, and rendered reports
+profile/**/details/
+profile/**/*.ncu-rep
+profile/**/*.nsys-rep
+profile/**/*.sqlite
+profile/**/*.qdrep
+
+# Python cache
+__pycache__/
+*.pyc

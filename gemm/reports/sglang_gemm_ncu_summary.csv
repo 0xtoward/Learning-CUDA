@@ -1,0 +1,13 @@
+scenario,variant,ncu_duration_ms,sm_pct,memory_pct,dram_pct,l2_pct,l1tex_pct,achieved_occ_pct,theoretical_occ_pct,registers_per_thread,shared_memory_bytes,dram_gbps,fma_pipe_pct,tensor_pipe_pct,hmma_pipe_pct,dominant_evidence
+prefill_qkv,V0_coalesced,29.1065,82.03,92.70,92.70,27.07,83.44,99.46,100.00,40,1024,228.59,6.22,0,0,DRAM_and_long_scoreboard
+prefill_qkv,V1_smem,21.5842,75.82,75.82,33.04,9.63,77.50,66.65,66.67,38,9216,80.72,7.93,0,0,shared_reuse_plus_barriers
+prefill_qkv,V2_register,4.8263,56.67,60.68,39.22,21.10,63.56,30.75,33.33,128,5120,96.31,36.28,0,0,register_limited_FMA
+prefill_qkv,V3_warp,3.4410,54.18,77.06,60.98,26.47,79.65,46.26,50.00,80,5376,164.47,45.40,0,0,mixed_memory_feed_and_FMA
+prefill_qkv,cuBLAS_FP32,2.4477,73.03,57.64,25.94,36.76,59.00,32.85,33.33,122,13568,68.97,63.32,0,0,scalar_FFMA_compute
+prefill_qkv,cuBLAS_TF32,1.5723,45.05,46.95,46.95,24.70,17.86,16.52,16.67,220,74752,127.87,3.22,45.53,45.53,tensor_HMMA_plus_resource_pressure
+decode_out,V0_coalesced,0.5729,78.48,78.48,69.96,21.25,87.37,73.78,100.00,40,1024,,,,shape_underfill_and_memory
+decode_out,V1_smem,1.0452,67.01,67.01,30.18,8.29,77.44,66.73,66.67,38,9216,,,,half_row_threads_masked
+decode_out,V2_register,1.0549,23.92,32.23,32.23,8.30,23.82,7.44,33.33,128,5120,,,,grid_underfill_and_registers
+decode_out,V3_warp,0.5840,29.45,52.42,52.42,14.35,37.10,14.75,50.00,80,5376,,,,grid_underfill
+decode_out,cuBLAS_FP32,0.2915,28.80,93.82,93.82,25.21,34.18,24.03,25.00,80,26624,,,,skinny_SIMT_memory
+decode_out,cuBLAS_TF32,0.2945,20.26,95.15,95.15,25.36,16.34,8.20,8.33,136,74752,,,,skinny_tensor_memory

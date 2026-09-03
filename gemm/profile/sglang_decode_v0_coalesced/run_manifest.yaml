@@ -1,0 +1,23 @@
+profile_id: "sglang_decode_v0_coalesced"
+created_at: "2026-09-03T13:29:00+08:00"
+backend: "nvidia-ncu"
+ncu_command: "/usr/local/bin/ncu"
+ncu_path_file: "./profile/ncu_path"
+ncu_detected_path: "/usr/local/NVIDIA-Nsight-Compute-2025.3/target/linux-desktop-glibc_2_11_3-x64/ncu"
+runtime: "native"
+privilege:
+  sudo_requested: "0"
+  effective_uid: "1000"
+  password_stored: false
+target_command: "./bin/v1_coalesced 16 4096 4096 20 5 --no-verify"
+kernel:
+  name: "gemm_v1_coalesced"
+  filter_mode: "regex"
+  filter: ".*gemm_v1_coalesced.*"
+  nvtx_range: ""
+profiling:
+  warmup_skip: 5
+  launch_count: 3
+  stages_requested: "basic,speed-of-light,occupancy"
+  stages_collected: "basic,speed_of_light,occupancy"
+reports_directory: "details"
