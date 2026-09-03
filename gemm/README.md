@@ -14,6 +14,9 @@ make ARCH=sm_89 nvtx -j
 ```bash
 ./bin/v0_naive_bad_mapping 1024 1024 1024 20 5
 ./bin/v7_warptiling         2048 2048 2048 20 5
+./bin/v3_cp_async_double_buffered 2048 2048 2048 20 5
+./bin/wmma_tf32_gemm        2048 2048 2048 20 5
+./bin/wmma_tf32_block_tiled 2048 2048 2048 20 5
 ./bin/cublas_baseline       2048 2048 2048 20 5
 ./bin/cublas_tf32_baseline  2048 2048 2048 20 5
 ./scripts/run_all.sh 1024 1024 1024 20
@@ -34,6 +37,7 @@ Read:
 - `notes/PROFILING_AND_IR.md`
 - `notes/PERFORMANCE_ANALYSIS_TUTORIAL.md` — CUDA Event / NVTX / NCU / PTX / SASS / Roofline from first principles
 - `notes/LOW_PRECISION_PROJECT_PLAN.md`
+- `notes/TENSOR_CORE_AND_PIPELINE.md` — handwritten WMMA and `cp.async` experiments
 - `reports/transformer_inference_shapes.md`
 - `reports/SGLANG_GEMM_PROFILE_REPORT.md` — SGLang-grounded prefill/decode case study
 - `reports/sglang_gemm_benchmark_summary.csv` — timing distributions and correctness
@@ -54,6 +58,12 @@ The four teaching stages are `v1_coalesced` (V0), `v2_smem_tiled` (V1),
 `cublas_baseline` keeps the lab's default FP32 SGEMM behavior.
 `cublas_tf32_baseline` explicitly enables the TF32 Tensor Core path so the
 arithmetic and accuracy tradeoff is visible rather than implicit.
+
+Two experimental teaching paths live under `extras/`: the first adds an
+Ampere-or-newer `cp.async` two-stage pipeline to V3, while the second is a
+two handwritten WMMA TF32 Tensor Core kernels (one warp tile, then a reused
+block tile).  They are intentionally kept
+outside the four-stage CUDA-core learning ladder.
 
 ## Important
 These are compact teaching kernels, deliberately easy to read. They are not expected to match cuBLAS/CUTLASS across shapes. Exact speedups depend on GPU, shape, clocks, toolkit, and compiler. The point is to correlate each code change with a profiler signal.

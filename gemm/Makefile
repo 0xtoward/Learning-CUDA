@@ -10,7 +10,7 @@ KERNELS := v0_naive_bad_mapping v1_coalesced v2_smem_tiled v3_1d_threadtile v4_2
 BINS := $(addprefix bin/,$(KERNELS))
 NVTX_BINS := $(addprefix bin_nvtx/,$(KERNELS))
 
-all: $(BINS) bin/bank_conflict_demo bin/cublas_baseline bin/cublas_tf32_baseline
+all: $(BINS) bin/bank_conflict_demo bin/v3_cp_async_double_buffered bin/wmma_tf32_gemm bin/wmma_tf32_block_tiled bin/cublas_baseline bin/cublas_tf32_baseline
 
 nvtx: $(NVTX_BINS) bin_nvtx/cublas_baseline bin_nvtx/cublas_tf32_baseline
 
@@ -23,6 +23,18 @@ bin_nvtx/%: kernels/%.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
 	$(NVCC) $(NVCCFLAGS) -DUSE_NVTX $< -lnvToolsExt -o $@
 
 bin/bank_conflict_demo: extras/bank_conflict_demo.cu
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) $< -o $@
+
+bin/v3_cp_async_double_buffered: extras/v3_cp_async_double_buffered.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) $< -o $@
+
+bin/wmma_tf32_gemm: extras/wmma_tf32_gemm.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) $< -o $@
+
+bin/wmma_tf32_block_tiled: extras/wmma_tf32_block_tiled.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
 	@mkdir -p bin
 	$(NVCC) $(NVCCFLAGS) $< -o $@
 
