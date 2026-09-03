@@ -17,6 +17,10 @@ make ARCH=sm_89 nvtx -j
 ./bin/v3_cp_async_double_buffered 2048 2048 2048 20 5
 ./bin/wmma_tf32_gemm        2048 2048 2048 20 5
 ./bin/wmma_tf32_block_tiled 2048 2048 2048 20 5
+./bin/tensorcore_fp16_lab naive 512 6144 4096 50 10
+./bin/tensorcore_fp16_lab ada   512 6144 4096 50 10
+./bin/tensorcore_fp16_cutlass_lab 64x128 512 6144 4096 50 10
+./bin/tensorcore_fp16_lab cublas 512 6144 4096 50 10
 ./bin/cublas_baseline       2048 2048 2048 20 5
 ./bin/cublas_tf32_baseline  2048 2048 2048 20 5
 ./scripts/run_all.sh 1024 1024 1024 20
@@ -38,8 +42,11 @@ Read:
 - `notes/PERFORMANCE_ANALYSIS_TUTORIAL.md` — CUDA Event / NVTX / NCU / PTX / SASS / Roofline from first principles
 - `notes/LOW_PRECISION_PROJECT_PLAN.md`
 - `notes/TENSOR_CORE_AND_PIPELINE.md` — handwritten WMMA and `cp.async` experiments
+- `notes/TENSOR_CORE_OPT_TABLE.md` — compact Tensor Core optimization ladder and NCU comparison recipe
+- `notes/INTERVIEW_KERNEL_SPRINT.md` — six short hand-writing drills; PTX is optional
 - `reports/transformer_inference_shapes.md`
 - `reports/SGLANG_GEMM_PROFILE_REPORT.md` — SGLang-grounded prefill/decode case study
+- `reports/TENSOR_CORE_ADA_REPORT.md` — FP16 Ada implementation, measurements, and profiler interpretation
 - `reports/sglang_gemm_benchmark_summary.csv` — timing distributions and correctness
 - `reports/sglang_gemm_ncu_summary.csv` — normalized profiler metrics
 
@@ -64,6 +71,12 @@ Ampere-or-newer `cp.async` two-stage pipeline to V3, and two use handwritten
 WMMA TF32 Tensor Core code (one warp tile, then a reused block tile).  They are
 intentionally kept
 outside the four-stage CUDA-core learning ladder.
+
+The independent FP16 Tensor Core track uses FP16 inputs and FP32 accumulation/
+output. `tensorcore_fp16_lab` contains a deliberately naive WMMA baseline and a
+handwritten Ada-oriented `mma.sync` pipeline. `tensorcore_fp16_cutlass_lab`
+provides shape-tuned open-source CUTLASS variants. The current target shape is
+the SGLang-style prefill QKV projection `512x4096 * 4096x6144`.
 
 ## Important
 These are compact teaching kernels, deliberately easy to read. They are not expected to match cuBLAS/CUTLASS across shapes. Exact speedups depend on GPU, shape, clocks, toolkit, and compiler. The point is to correlate each code change with a profiler signal.

@@ -1,6 +1,7 @@
 NVCC ?= nvcc
 ARCH ?= sm_89
 CXXSTD ?= c++17
+CUTLASS_DIR ?= /home/l1q/WSL/CUTLASS
 NVCCFLAGS := -O3 -std=$(CXXSTD) -lineinfo -arch=$(ARCH) -Xptxas=-v -Iinclude
 ifeq ($(FAST),1)
 NVCCFLAGS += --use_fast_math
@@ -10,7 +11,7 @@ KERNELS := v0_naive_bad_mapping v1_coalesced v2_smem_tiled v3_1d_threadtile v4_2
 BINS := $(addprefix bin/,$(KERNELS))
 NVTX_BINS := $(addprefix bin_nvtx/,$(KERNELS))
 
-all: $(BINS) bin/bank_conflict_demo bin/v3_cp_async_double_buffered bin/wmma_tf32_gemm bin/wmma_tf32_block_tiled bin/cublas_baseline bin/cublas_tf32_baseline
+all: $(BINS) bin/bank_conflict_demo bin/v3_cp_async_double_buffered bin/wmma_tf32_gemm bin/wmma_tf32_block_tiled bin/tensorcore_fp16_lab bin/tensorcore_fp16_cutlass_lab bin/cublas_baseline bin/cublas_tf32_baseline
 
 nvtx: $(NVTX_BINS) bin_nvtx/cublas_baseline bin_nvtx/cublas_tf32_baseline
 
@@ -37,6 +38,14 @@ bin/wmma_tf32_gemm: extras/wmma_tf32_gemm.cu include/gemm_common.cuh include/gem
 bin/wmma_tf32_block_tiled: extras/wmma_tf32_block_tiled.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
 	@mkdir -p bin
 	$(NVCC) $(NVCCFLAGS) $< -o $@
+
+bin/tensorcore_fp16_lab: extras/tensorcore_fp16_lab.cu extras/tensorcore_fp16_kernels.cuh include/hgemm_common.cuh
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) $< -Iextras -lcublas -o $@
+
+bin/tensorcore_fp16_cutlass_lab: extras/tensorcore_fp16_cutlass_lab.cu extras/tensorcore_fp16_cutlass.cuh include/hgemm_common.cuh
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) $< -Iextras -I$(CUTLASS_DIR)/include -o $@
 
 bin/cublas_baseline: extras/cublas_baseline.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
 	@mkdir -p bin

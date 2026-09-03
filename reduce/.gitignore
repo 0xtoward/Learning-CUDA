@@ -1,0 +1,6 @@
+bin/
+bench_skill/*.so
+profile/**/details/
+profile/**/*.ncu-rep
+__pycache__/
+*.pyc

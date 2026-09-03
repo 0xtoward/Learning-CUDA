@@ -1,0 +1,89 @@
+schema_version: 3.0
+target:
+  runtime: native
+  executable: ./bin/tensorcore_fp16_lab
+  working_directory: .
+  args:
+  - naive
+  - '512'
+  - '6144'
+  - '4096'
+  - '8'
+  - '5'
+  - --no-verify
+  env: {}
+  stdin: null
+  timeout_seconds: null
+  python:
+    interpreter: python3
+    entry_kind: null
+    script: null
+    module: null
+    jit_framework: null
+runtime_options:
+  triton_enabled: false
+  triton_kernel_hint: null
+  triton_autotune_policy: warmup_or_fixed_config
+  jit_warmup_required: false
+  recommended_warmup_skip: 20
+  require_cuda_synchronize_around_profile_window: true
+  source_mapping_expectation: best_effort
+  notes: []
+kernel:
+  name: hgemm_wmma_naive
+  filter_mode: regex
+  filter: .*hgemm_wmma_naive.*
+  profile_id: tensor_fp16_naive_gui
+  nvtx_range: null
+  allow_discovery_fallback: true
+profiling:
+  backend: nvidia-ncu
+  initial_level: basic
+  warmup_policy: auto
+  warmup_skip: null
+  launch_count: null
+  enable_source_mapping: true
+  enable_visual_report: false
+  extra_profiler_options: []
+  ncu_bin: /usr/local/bin/ncu
+  output_root: ./profile
+privilege:
+  mode: none
+  full_sudo_policy: root-or-exact-ncu-path-nopasswd-only
+  password_storage: forbidden
+  forbidden:
+  - Do not store sudo passwords in target files, scripts, logs, reports, environment
+    variables, shell history, or commands.
+  - Do not pipe passwords into sudo, auto-type passwords, or read passwords from files.
+  - Do not use privilege for anything outside the profiling command path.
+discovery:
+  enabled_when_filter_missing: true
+  fallback_when_kernel_filter_misses: true
+  max_candidates: 20
+  prefer_user_named_kernel: true
+  rank_by:
+  - user_hint
+  - duration
+  - launch_count
+  command_extra_options: []
+analysis:
+  collect_memory: true
+  collect_compute: auto
+  collect_occupancy: true
+  collect_roofline: auto
+  collect_source: auto
+  enable_bottleneck_decision_engine: false
+  enable_regression_compare: false
+  compare_baseline: auto
+  random_variation_tolerance_pct: 2.0
+  generate_source_hotspots_table: true
+visualization:
+  enabled: false
+  format: png
+  require_python_packages:
+  - matplotlib
+  - pyyaml
+notes:
+  user_requirements: GUI-openable NCU report for baseline comparison; Tensor Core,
+    memory, occupancy, stalls, source/SASS, and runtime spill evidence
+  unsupported_or_deferred_requirements: []
