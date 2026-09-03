@@ -1,0 +1,25 @@
+profile_id: "ccore_v2_register_gui"
+created_at: "2026-09-03T17:41:26+08:00"
+backend: "nvidia-ncu"
+ncu_command: "/usr/local/bin/ncu"
+ncu_path_file: "./profile/ncu_path"
+ncu_detected_path: "/usr/local/NVIDIA-Nsight-Compute-2025.3/target/linux-desktop-glibc_2_11_3-x64/ncu"
+runtime: "native"
+privilege:
+  sudo_requested: "0"
+  effective_uid: "1000"
+  password_stored: false
+target_command: "./bin/v4_2d_threadtile 512 6144 4096 12 5 --no-verify"
+kernel:
+  name: "gemm_v4_2d"
+  filter_mode: "regex"
+  filter: ".*gemm_v4_2d.*"
+  nvtx_range: ""
+profiling:
+  warmup_skip: 5
+  launch_count: 1
+  stages_requested: "all"
+  stages_collected: "basic,speed_of_light,memory,compute,occupancy,roofline,source,gui_rep_detailed"
+  gui_report: "ccore_v2_register_detailed.ncu-rep"
+  gui_report_set: "detailed"
+reports_directory: "details"

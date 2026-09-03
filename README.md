@@ -1,5 +1,31 @@
 # Learning-CUDA
 
+CUDA kernel performance engineering portfolio and InfiniTensor 2026 summer
+camp coursework. The `gemm` branch keeps correctness tests, reproducible
+CUDA-event benchmarks, NCU manifests/reports, and progressively optimized
+implementations together.
+
+## Performance labs on RTX 4070 Laptop
+
+| Track | Optimization path | Representative result |
+|---|---|---:|
+| CUDA Core FP32 GEMM | coalescing -> SMEM tile -> register tile -> warp tile | 0.914 -> 7.508 TFLOP/s; 68.7% of cuBLAS at `512x6144x4096` |
+| Tensor Core GEMM | naive WMMA -> handwritten `cp.async/ldmatrix/mma.sync` -> CUTLASS | 2.91 -> 38.07 TFLOP/s; CUTLASS 0.6769 ms at the same shape |
+| FP32 reduce | interleaved tree -> sequential addressing -> warp shuffle -> `float4` | 91.79 -> 190.49 GB/s; 96.3% DRAM throughput in NCU |
+
+- CUDA Core GEMM: [`gemm/README.md`](gemm/README.md) and
+  [`gemm/notes/GEMM_OPT_TABLE.md`](gemm/notes/GEMM_OPT_TABLE.md)
+- Tensor Core: [`gemm/notes/TENSOR_CORE_OPT_TABLE.md`](gemm/notes/TENSOR_CORE_OPT_TABLE.md)
+- Generic sum/max/min reduce: [`reduce/README.md`](reduce/README.md)
+- Profiling folders contain exact commands, manifests, compact reports, and
+  local-only `.ncu-rep` files for GUI inspection.
+
+The headline numbers use cold-L2 CUDA-event medians. Tensor Core uses FP16
+A/B with FP32 accumulation/output; CUDA Core uses FP32. Results are scoped to
+the stated GPU, shape, and benchmark contract.
+
+---
+
 本项目为 2026 年夏季 InfiniTensor 大模型与人工智能系统训练营 CUDA 方向专业阶段的作业与项目系统。
 
 ## 项目结构
@@ -144,54 +170,3 @@ make PLATFORM=moore
 ## 有疑问？
 
 可以在群里直接询问助教。
-
-## CUDA 学习实验
-
-`gemm/` 和 `reduce/` 是独立的学习、benchmark 与 profiling 实验，便于
-练习面试常见 kernel；它们不替代上面的训练营评分入口 `src/`。
-
-### CUDA Core GEMM：只记四版
-
-| 版本 | 解决的问题 | 核心数据路径 | 本仓库入口 | 更新架构继续加什么 |
-|---|---|---|---|---|
-| V0 Coalesced | 先让 warp 连续访问 B/C | GMEM | `gemm/kernels/v1_coalesced.cu` | 所有架构都必须先做好映射和合并访问 |
-| V1 SMEM Tile | A/B 不要被每个线程反复从显存读取 | GMEM -> SMEM | `gemm/kernels/v2_smem_tiled.cu` | Hopper+ 可用 TMA 搬 tile、cluster multicast |
-| V2 Register Tile | 降低 SMEM 流量并扩大 A/B 复用 | SMEM -> registers | `gemm/kernels/v4_2d_threadtile.cu` | 更宽 MMA/异步流水仍要平衡复用、寄存器和 occupancy |
-| V3 Warp Tile | 建立 block -> warp -> thread 层次 | GMEM -> SMEM -> warp/register | `gemm/kernels/v7_warptiling.cu` | Hopper/Blackwell：TMA、WGMMA/UMMA、warp specialization、persistent/cluster scheduling |
-| cuBLAS | 生产级 shape/架构特化基线 | 全层级 | `gemm/extras/cublas_baseline.cu` | 新版库自动选择对应架构路径 |
-
-完整八级拆分、bank conflict、vectorized load 和 NCU 观察点见
-[`gemm/notes/GEMM_OPT_TABLE.md`](gemm/notes/GEMM_OPT_TABLE.md)。
-
-### Tensor Core GEMM：Ada 实测四版
-
-数据契约为 FP16 A/B、FP32 accumulate/C；RTX 4070 Laptop、
-`M=512,N=6144,K=4096`、cold-L2、CUDA-event median。
-
-| 版本 | 核心形态 | 实测 | 本仓库入口 | 更新架构继续加什么 |
-|---|---|---:|---|---|
-| T0 Naive WMMA | 一个 warp 一个 `16x16` tile，直接反复读 GMEM | 8.8417 ms / 2.91 TFLOP/s | `gemm/extras/tensorcore_fp16_kernels.cuh` | 保留为教学基线 |
-| T1 Handwritten Ada | `cp.async -> permuted SMEM -> ldmatrix -> mma.sync`，3-stage | 1.0199 ms / 25.27 TFLOP/s | 同上 | Hopper：TMA + WGMMA + warp specialization；Blackwell：UMMA/TMEM |
-| T2 CUTLASS tuned | `64x128x32` CTA、3-stage、完整 iterator/epilogue | 0.6769 ms / 38.07 TFLOP/s | `gemm/extras/tensorcore_fp16_cutlass.cuh` | SM90/SM100 collective mainloop、TMA multicast、cluster/persistent scheduler |
-| cuBLAS | vendor kernel family + runtime dispatch | 0.6994 ms / 36.85 TFLOP/s | `gemm/extras/tensorcore_fp16_kernels.cuh` | 新版库自动选择架构特化实现 |
-
-这个 3.3% 的 CUTLASS 领先只对该固定 shape 和测试口径成立；完整报告与
-NCU 双报告对比方法见
-[`gemm/notes/TENSOR_CORE_OPT_TABLE.md`](gemm/notes/TENSOR_CORE_OPT_TABLE.md)。
-
-### Reduce：通用 sum/max/min
-
-RTX 4070 Laptop、FP32 sum、`N=16,777,216`、cold-L2、CUDA-event median。
-
-| 版本 | 解决的问题 | 核心形态 | 实测 / 有效带宽 | 更新架构继续加什么 |
-|---|---|---|---:|---|
-| V0 Interleaved | 先把多 block reduce 写对 | modulo shared-memory tree | 0.7311 ms / 91.79 GB/s | 无架构依赖 |
-| V1 Sequential | 去分歧并把首轮输入翻倍 | two inputs/thread | 0.3553 ms / 188.88 GB/s | 对齐后扩大 vector load |
-| V2 Warp Shuffle | warp 内不再用 SMEM/barrier | `__shfl_down_sync` + 每 warp 一个 partial | 0.3543 ms / 189.42 GB/s | cooperative groups 可增强可读性/可移植性 |
-| V3 Vectorized | 减 load 指令和中间 kernel 数 | `float4` + grid-stride + hierarchical reduce | 0.3523 ms / 190.49 GB/s | Hopper+ 可研究 persistent/cooperative、cluster/DSM；更常见的收益是算子融合 |
-| CUB DeviceReduce | 生产级库基线 | 架构特化 dispatch | 0.3533 ms / 189.95 GB/s | 新版 CCCL/CUB 自动更新策略 |
-
-V3 与 CUB 的中位数仅差约 0.3%；NCU 显示 V3 首轮已达到 96.3% DRAM
-吞吐利用率。源码、完整表和复现实验见
-[`reduce/README.md`](reduce/README.md)。面试练习顺序见
-[`gemm/notes/INTERVIEW_KERNEL_SPRINT.md`](gemm/notes/INTERVIEW_KERNEL_SPRINT.md)。
