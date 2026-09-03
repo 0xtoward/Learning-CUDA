@@ -59,10 +59,10 @@ The four teaching stages are `v1_coalesced` (V0), `v2_smem_tiled` (V1),
 `cublas_tf32_baseline` explicitly enables the TF32 Tensor Core path so the
 arithmetic and accuracy tradeoff is visible rather than implicit.
 
-Two experimental teaching paths live under `extras/`: the first adds an
-Ampere-or-newer `cp.async` two-stage pipeline to V3, while the second is a
-two handwritten WMMA TF32 Tensor Core kernels (one warp tile, then a reused
-block tile).  They are intentionally kept
+Three experimental teaching kernels live under `extras/`: one adds an
+Ampere-or-newer `cp.async` two-stage pipeline to V3, and two use handwritten
+WMMA TF32 Tensor Core code (one warp tile, then a reused block tile).  They are
+intentionally kept
 outside the four-stage CUDA-core learning ladder.
 
 ## Important
