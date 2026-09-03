@@ -4,10 +4,16 @@ Educational CUDA GEMM ladder corresponding to the course sequence:
 
 `naive -> coalescing -> SMEM tiling -> 1D thread tiling -> 2D thread tiling -> swizzle/BCF -> vectorized access -> warp tiling`
 
+For a shorter code-reading path, start with [`examples/README.md`](examples/README.md):
+minimal CUTLASS, minimal WMMA Tensor Core, then an annotated warp-tiled CUDA
+Core GEMM. The last example also includes an optional one-instruction inline
+PTX demonstration without presenting PTX as a performance requirement.
+
 ## Build on RTX 4070
 ```bash
 make ARCH=sm_89 -j
 make ARCH=sm_89 nvtx -j
+make ARCH=sm_89 teaching -j
 ```
 
 ## Run

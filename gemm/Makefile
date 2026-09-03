@@ -13,6 +13,8 @@ NVTX_BINS := $(addprefix bin_nvtx/,$(KERNELS))
 
 all: $(BINS) bin/bank_conflict_demo bin/v3_cp_async_double_buffered bin/wmma_tf32_gemm bin/wmma_tf32_block_tiled bin/tensorcore_fp16_lab bin/tensorcore_fp16_cutlass_lab bin/cublas_baseline bin/cublas_tf32_baseline
 
+teaching: bin/cutlass_minimal bin/wmma_minimal bin/cuda_core_gemm_annotated bin/cuda_core_gemm_annotated_ptx
+
 nvtx: $(NVTX_BINS) bin_nvtx/cublas_baseline bin_nvtx/cublas_tf32_baseline
 
 bin/%: kernels/%.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
@@ -47,6 +49,22 @@ bin/tensorcore_fp16_cutlass_lab: extras/tensorcore_fp16_cutlass_lab.cu extras/te
 	@mkdir -p bin
 	$(NVCC) $(NVCCFLAGS) $< -Iextras -I$(CUTLASS_DIR)/include -o $@
 
+bin/cutlass_minimal: examples/cutlass_minimal.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) $< -I$(CUTLASS_DIR)/include -o $@
+
+bin/wmma_minimal: examples/wmma_minimal.cu include/hgemm_common.cuh
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) $< -o $@
+
+bin/cuda_core_gemm_annotated: examples/cuda_core_gemm_annotated.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) $< -o $@
+
+bin/cuda_core_gemm_annotated_ptx: examples/cuda_core_gemm_annotated.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
+	@mkdir -p bin
+	$(NVCC) $(NVCCFLAGS) -DGEMM_DEMO_INLINE_PTX_FMA $< -o $@
+
 bin/cublas_baseline: extras/cublas_baseline.cu include/gemm_common.cuh include/gemm_entrypoint.cuh
 	@mkdir -p bin
 	$(NVCC) $(NVCCFLAGS) $< -lcublas -o $@
@@ -66,4 +84,4 @@ bin_nvtx/cublas_tf32_baseline: extras/cublas_tf32_baseline.cu include/gemm_commo
 clean:
 	rm -rf bin/* build/* reports/*
 
-.PHONY: all nvtx clean
+.PHONY: all teaching nvtx clean
