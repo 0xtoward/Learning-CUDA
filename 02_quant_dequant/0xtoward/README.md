@@ -2,6 +2,8 @@
 
 作者：0xtoward。总结见 [中文报告](REPORT.md)，完整数据见 [误差表](accuracy.md)、[性能表](benchmark.md) 和 `results/`。
 
+2026-09-22 补记：[Marlin 源码学习、CUDA Core 实验与 TODO](MARLIN_LEARNING.md)，记录寄存器复用、向量读取、异步复制和 warp 分工的实际迭代。
+
 ## 快速运行
 
 环境：Linux/WSL、Python 3.11+、CUDA Toolkit 12.x、CUDA 版 PyTorch。基础 CUDA core 编译 SM75/SM89，使用普通 CUDA 指令；本机验证为 RTX 4070 Laptop（SM89）。

@@ -146,6 +146,8 @@ Qwen3.5-0.8B 转换 186 个 Linear：原始权重 995,229,696 bytes；MXFP8 513,
 
 ## 7. Marlin：从独立反量化到融合 GEMM
 
+后续学习与实验见 [2026-09-22 Marlin 补记](MARLIN_LEARNING.md)：知乎/源码优化思路、CUDA Core 小 M 终版、cp.async 与 warp specialization 对照，以及新的推理结果和 TODO。本节保留首次提交时的实验记录。
+
 静态 quant 通常只做一次；dequant 随每次 Linear 重复。独立展开会写出整块 BF16 权重，再由 GEMM 读回。Marlin 在片上解码并直接供 MMA 消费，减少这部分显存流量。Ada 上研究的是 W8A16/W4A16，使用 BF16/FP16 Tensor Core；基础 codec 与它分开实现。
 
 ### 已尝试的优化
